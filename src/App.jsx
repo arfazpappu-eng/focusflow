@@ -34,7 +34,7 @@ function App() {
 
     try {
 
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch('https://focusflow-rho-two.vercel.app/api/auth/login', {
 
         method: 'POST',
 
@@ -94,7 +94,7 @@ function App() {
 
     try {
 
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('https://focusflow-rho-two.vercel.app/api/auth/register', {
 
         method: 'POST',
 
@@ -362,7 +362,7 @@ function App() {
 
   useEffect(() => {
 
-    fetch('http://localhost:5000/api/tasks')
+    fetch('https://focusflow-rho-two.vercel.app/api/tasks')
 
       .then((response) => {
 
@@ -398,7 +398,7 @@ function App() {
 
   useEffect(() => {
 
-    fetch('http://localhost:5000/api/schedules')
+    fetch('https://focusflow-rho-two.vercel.app/api/schedules')
 
       .then((response) => {
 
@@ -434,7 +434,7 @@ function App() {
 
   useEffect(() => {
 
-    fetch('http://localhost:5000/api/study-sessions')
+    fetch('https://focusflow-rho-two.vercel.app/api/study-sessions')
 
       .then((response) => {
 
@@ -548,7 +548,7 @@ function App() {
 
         const response = await fetch(
 
-          `http://localhost:5000/api/tasks/${editingTaskId}`,
+          `https://focusflow-rho-two.vercel.app/api/tasks/${editingTaskId}`,
 
           {
 
@@ -612,7 +612,7 @@ function App() {
 
         const response = await fetch(
 
-          'http://localhost:5000/api/tasks',
+          'https://focusflow-rho-two.vercel.app/api/tasks',
 
           {
 
@@ -714,7 +714,7 @@ function App() {
 
       const response = await fetch(
 
-        `http://localhost:5000/api/tasks/${taskId}`,
+        `https://focusflow-rho-two.vercel.app/api/tasks/${taskId}`,
 
         {
 
@@ -774,7 +774,7 @@ function App() {
 
       const response = await fetch(
 
-        `http://localhost:5000/api/tasks/${taskId}`,
+        `https://focusflow-rho-two.vercel.app/api/tasks/${taskId}`,
 
         {
 
@@ -872,7 +872,7 @@ function App() {
 
       const response = await fetch(
 
-        'http://localhost:5000/api/schedules',
+        'https://focusflow-rho-two.vercel.app/api/schedules',
 
         {
 
@@ -952,7 +952,7 @@ function App() {
 
       const response = await fetch(
 
-        `http://localhost:5000/api/schedules/${scheduleId}`,
+        `https://focusflow-rho-two.vercel.app/api/schedules/${scheduleId}`,
 
         {
 
@@ -1032,7 +1032,7 @@ function App() {
 
       const response = await fetch(
 
-        'http://localhost:5000/api/study-sessions',
+        'https://focusflow-rho-two.vercel.app/api/study-sessions',
 
         {
 
@@ -1104,7 +1104,7 @@ function App() {
 
       const response = await fetch(
 
-        `http://localhost:5000/api/study-sessions/${sessionId}`,
+        `https://focusflow-rho-two.vercel.app/api/study-sessions/${sessionId}`,
 
         {
 
