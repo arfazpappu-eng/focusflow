@@ -15,10 +15,147 @@ const authHeaders = (extra = {}) => {
 
 const jsonHeaders = () => authHeaders({ 'Content-Type': 'application/json' })
 
+// =========================
+// TIME HELPERS
+// =========================
+
+// "17:00" -> "05:00 PM"
+const formatTime = (value) => {
+  if (!value) return ''
+  const [h, m] = value.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour12 = h % 12 === 0 ? 12 : h % 12
+  return `${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`
+}
+
+const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'))
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
+
+// 12-hour time picker (always shows AM/PM). Stores "HH:mm" (24h),
+// so the database and Google Calendar code keep working.
+function TimeField({ id, label, value, onChange }) {
+  let hour = ''
+  let minute = ''
+  let period = 'AM'
+
+  if (value) {
+    const [h, m] = value.split(':').map(Number)
+    period = h >= 12 ? 'PM' : 'AM'
+    hour = String(h % 12 === 0 ? 12 : h % 12).padStart(2, '0')
+    minute = String(m).padStart(2, '0')
+  }
+
+  const update = (changes) => {
+    const next = {
+      hour: hour || '09',
+      minute: minute || '00',
+      period,
+      ...changes,
+    }
+    const h24 = (Number(next.hour) % 12) + (next.period === 'PM' ? 12 : 0)
+    onChange(`${String(h24).padStart(2, '0')}:${next.minute}`)
+  }
+
+  return (
+    <div className="time-field">
+      <label className="time-label" htmlFor={`${id}-hour`}>
+        {label}
+      </label>
+
+      <div className="time-box">
+        <select
+          id={`${id}-hour`}
+          value={hour}
+          onChange={(event) => update({ hour: event.target.value })}
+          aria-label={`${label} hour`}
+        >
+          <option value="" disabled>--</option>
+          {HOURS.map((h) => (
+            <option key={h} value={h}>{h}</option>
+          ))}
+        </select>
+
+        <span className="time-colon">:</span>
+
+        <select
+          value={minute}
+          onChange={(event) => update({ minute: event.target.value })}
+          aria-label={`${label} minutes`}
+        >
+          <option value="" disabled>--</option>
+          {MINUTES.map((m) => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+
+        <select
+          className="time-period"
+          value={period}
+          onChange={(event) => update({ period: event.target.value })}
+          aria-label={`${label} AM or PM`}
+        >
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
+        </select>
+
+        <svg className="time-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+// =========================
+// TABS
+// =========================
+
+const iconProps = {
+  viewBox: '0 0 24 24',
+  width: 22,
+  height: 22,
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+}
+
+const CalendarClockIcon = () => (
+  <svg {...iconProps}>
+    <path d="M21 12V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h6" />
+    <path d="M8 2v4M16 2v4M3 10h18" />
+    <circle cx="17" cy="17" r="4" />
+    <path d="M17 15.5V17l1 1" />
+  </svg>
+)
+
+const BookIcon = () => (
+  <svg {...iconProps}>
+    <path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z" />
+    <path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z" />
+  </svg>
+)
+
+const ChartIcon = () => (
+  <svg {...iconProps}>
+    <path d="M3 3v18h18" />
+    <path d="M7 15l4-4 3 3 5-6" />
+  </svg>
+)
+
+const TABS = [
+  { id: 'schedule', label: 'Schedule time', Icon: CalendarClockIcon },
+  { id: 'tasks', label: 'Plan study time', Icon: BookIcon },
+  { id: 'sessions', label: 'Record progress', Icon: ChartIcon },
+]
+
 function App() {
   const [message, setMessage] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('tasks')
+  const [activeTab, setActiveTab] = useState('schedule')
 
   // =========================
   // AUTHENTICATION
@@ -686,33 +823,6 @@ function App() {
         <nav className={menuOpen ? 'mobile-menu-open' : ''}>
           <button
             type="button"
-            className={activeTab === 'tasks' ? 'active' : ''}
-            aria-current={activeTab === 'tasks' ? 'page' : undefined}
-            onClick={() => goToTab('tasks')}
-          >
-            Tasks
-          </button>
-
-          <button
-            type="button"
-            className={activeTab === 'schedule' ? 'active' : ''}
-            aria-current={activeTab === 'schedule' ? 'page' : undefined}
-            onClick={() => goToTab('schedule')}
-          >
-            Schedule
-          </button>
-
-          <button
-            type="button"
-            className={activeTab === 'sessions' ? 'active' : ''}
-            aria-current={activeTab === 'sessions' ? 'page' : undefined}
-            onClick={() => goToTab('sessions')}
-          >
-            Study Sessions
-          </button>
-
-          <button
-            type="button"
             onClick={() => {
               loginWithGoogle()
               setMenuOpen(false)
@@ -776,6 +886,23 @@ function App() {
             {message && <p className="welcome-message">{message}</p>}
           </div>
         </section>
+
+        {/* TAB BAR (shows one section at a time) */}
+        <div className="tab-bar" role="tablist" aria-label="FocusFlow sections">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === id}
+              className={`tab-button ${activeTab === id ? 'active' : ''}`}
+              onClick={() => goToTab(id)}
+            >
+              <Icon />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
 
         {/* TASKS TAB */}
         {activeTab === 'tasks' && (
@@ -888,23 +1015,21 @@ function App() {
                 onChange={(event) => setScheduleDate(event.target.value)}
               />
 
-              <label>
-                Start time
-                <input
-                  type="time"
+              <div className="time-row">
+                <TimeField
+                  id="schedule-start"
+                  label="Start time"
                   value={scheduleStart}
-                  onChange={(event) => setScheduleStart(event.target.value)}
+                  onChange={setScheduleStart}
                 />
-              </label>
 
-              <label>
-                End time
-                <input
-                  type="time"
+                <TimeField
+                  id="schedule-end"
+                  label="End time"
                   value={scheduleEnd}
-                  onChange={(event) => setScheduleEnd(event.target.value)}
+                  onChange={setScheduleEnd}
                 />
-              </label>
+              </div>
 
               <input
                 type="url"
@@ -936,7 +1061,8 @@ function App() {
                       <h3>{schedule.subject}</h3>
                       <p>Date: {schedule.date}</p>
                       <p>
-                        Time: {schedule.startTime} - {schedule.endTime}
+                        Time: {formatTime(schedule.startTime)} -{' '}
+                        {formatTime(schedule.endTime)}
                       </p>
                     </div>
 

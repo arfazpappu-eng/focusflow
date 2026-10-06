@@ -18,7 +18,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -105,7 +106,7 @@ button {
 ========================= */
 
 .hero-section {
-  padding: 110px 8%;
+  padding: 110px 8% 70px;
   text-align: center;
   background: #ffffff;
 }
@@ -166,6 +167,58 @@ button {
 }
 
 /* =========================
+   TAB BAR
+========================= */
+
+.tab-bar {
+  display: flex;
+  max-width: 900px;
+  margin: 0 auto 40px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  padding: 16px 12px;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.tab-button:hover {
+  background: #f5f7fb;
+}
+
+.tab-button:focus-visible {
+  outline: 2px solid #2864e8;
+  outline-offset: -2px;
+}
+
+.tab-button.active {
+  background: #eef3ff;
+  color: #2864e8;
+  border-bottom-color: #2864e8;
+}
+
+/* =========================
    GENERAL SECTIONS
 ========================= */
 
@@ -182,7 +235,7 @@ button {
 }
 
 .schedule-section {
-  background: #ffffff;
+  background: #f5f7fb;
 }
 
 .session-section {
@@ -257,6 +310,89 @@ button {
   padding: 10px 16px;
   background: #e5e7eb;
   color: #111827;
+}
+
+/* =========================
+   TIME PICKERS (Start / End time)
+========================= */
+
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+}
+
+.time-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.time-box {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  padding: 3px 13px;
+
+  background: #ffffff;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.time-box:focus-within {
+  border-color: #2864e8;
+  box-shadow: 0 0 0 3px rgba(40, 100, 232, 0.15);
+}
+
+.time-box select {
+  margin: 0;
+  padding: 9px 2px;
+  width: auto;
+
+  background: transparent;
+  color: #111827;
+
+  border: none;
+  outline: none;
+
+  font-size: 15px;
+  cursor: pointer;
+
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.time-box .time-period {
+  margin-left: 8px;
+}
+
+.time-colon {
+  font-weight: 700;
+  color: #111827;
+}
+
+.time-icon {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+
+  fill: none;
+  stroke: #64748b;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* =========================
@@ -337,6 +473,12 @@ button {
   color: #ffffff;
 }
 
+/* keep the delete button red inside schedule actions */
+.schedule-actions .delete-button {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .task-status {
   font-size: 13px;
   font-weight: 700;
@@ -375,21 +517,23 @@ button {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
 }
 
+/* the number */
 .summary-card h3 {
   margin: 0 0 8px;
-  font-size: 14px;
-  color: #64748b;
-}
-
-.summary-card p {
-  margin: 0;
   font-size: 25px;
   font-weight: 700;
   color: #2864e8;
 }
 
+/* the label */
+.summary-card p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
 /* =========================
-   MOBILE HAMBURGER MENU
+   MOBILE
 ========================= */
 
 @media (max-width: 700px) {
@@ -485,7 +629,7 @@ button {
   }
 
   .hero-section {
-    padding: 70px 20px;
+    padding: 70px 20px 50px;
   }
 
   .hero-section h1 {
@@ -504,6 +648,19 @@ button {
   .hero-buttons button {
     width: 90%;
     max-width: 280px;
+  }
+
+  /* tab bar: icon above label */
+  .tab-bar {
+    margin: 0 14px 28px;
+  }
+
+  .tab-button {
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 4px;
+    font-size: 12px;
+    text-align: center;
   }
 
   .features-section,
@@ -540,6 +697,10 @@ button {
 
 @media (max-width: 420px) {
   .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .time-row {
     grid-template-columns: 1fr;
   }
 
