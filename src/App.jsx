@@ -1002,41 +1002,44 @@ function App() {
             </p>
 
             <div className="schedule-form">
-              <input
-                type="text"
-                placeholder="Subject or activity"
-                value={scheduleSubject}
-                onChange={(event) => setScheduleSubject(event.target.value)}
-              />
+            <input
+  type="text"
+  aria-label="Subject or activity"
+  placeholder="Subject or activity"
+  value={scheduleSubject}
+  onChange={(event) => setScheduleSubject(event.target.value)}
+/>
 
-              <input
-                type="date"
-                value={scheduleDate}
-                onChange={(event) => setScheduleDate(event.target.value)}
-              />
+<input
+  type="date"
+  aria-label="Schedule date"
+  value={scheduleDate}
+  onChange={(event) => setScheduleDate(event.target.value)}
+/>
 
-              <div className="time-row">
-                <TimeField
-                  id="schedule-start"
-                  label="Start time"
-                  value={scheduleStart}
-                  onChange={setScheduleStart}
-                />
+<div className="time-row">
+  <TimeField
+    id="schedule-start"
+    label="Start time"
+    value={scheduleStart}
+    onChange={setScheduleStart}
+  />
 
-                <TimeField
-                  id="schedule-end"
-                  label="End time"
-                  value={scheduleEnd}
-                  onChange={setScheduleEnd}
-                />
-              </div>
+  <TimeField
+    id="schedule-end"
+    label="End time"
+    value={scheduleEnd}
+    onChange={setScheduleEnd}
+  />
+</div>
 
-              <input
-                type="url"
-                placeholder="Online class link (optional)"
-                value={scheduleClassLink}
-                onChange={(event) => setScheduleClassLink(event.target.value)}
-              />
+<input
+  type="url"
+  aria-label="Online class link (optional)"
+  placeholder="Online class link (optional)"
+  value={scheduleClassLink}
+  onChange={(event) => setScheduleClassLink(event.target.value)}
+/> 
 
               <button type="button" onClick={addSchedule}>
                 Add Schedule
