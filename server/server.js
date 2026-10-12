@@ -28,15 +28,31 @@ app.use(
 )
 
 // ==================== DATABASE ====================
+mongoose.set('bufferCommands', false)
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
+async function startServer() {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error('MONGO_URI is not configured')
+    }
+
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+    })
+
     console.log('MongoDB connected successfully')
-  })
-  .catch((error) => {
-    console.error('MongoDB connection failed:', error.message)
-  })
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`)
+    })
+  } catch (error) {
+    console.error('Server startup failed:', error.message)
+    process.exit(1)
+  }
+}
+
+startServer()
 
 // ==================== AUTHENTICATION ====================
 
