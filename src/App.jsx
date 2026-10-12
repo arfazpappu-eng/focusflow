@@ -1001,50 +1001,54 @@ function App() {
               Create a simple schedule for your study activities.
             </p>
 
-            <div className="schedule-form">
-            <input
-  type="text"
-  aria-label="Subject or activity"
-  placeholder="Subject or activity"
-  value={scheduleSubject}
-  onChange={(event) => setScheduleSubject(event.target.value)}
-/>
-
-<input
-  type="date"
-  aria-label="Schedule date"
-  value={scheduleDate}
-  onChange={(event) => setScheduleDate(event.target.value)}
-/>
-
-<div className="time-row">
-  <TimeField
-    id="schedule-start"
-    label="Start time"
-    value={scheduleStart}
-    onChange={setScheduleStart}
+             <div className="schedule-form">
+  <label htmlFor="schedule-subject">
+    Subject or activity
+  </label>
+  <input
+    id="schedule-subject"
+    type="text"
+    placeholder="Subject or activity"
+    value={scheduleSubject}
+    onChange={(event) => setScheduleSubject(event.target.value)}
   />
 
-  <TimeField
-    id="schedule-end"
-    label="End time"
-    value={scheduleEnd}
-    onChange={setScheduleEnd}
+  <label htmlFor="schedule-date">Date</label>
+  <input
+    id="schedule-date"
+    type="date"
+    value={scheduleDate}
+    onChange={(event) => setScheduleDate(event.target.value)}
   />
+
+  <div className="time-row">
+    <TimeField
+      id="schedule-start"
+      label="Start time"
+      value={scheduleStart}
+      onChange={setScheduleStart}
+    />
+
+    <TimeField
+      id="schedule-end"
+      label="End time"
+      value={scheduleEnd}
+      onChange={setScheduleEnd}
+    />
+  </div>
+
+  <input
+    type="url"
+    aria-label="Online class link (optional)"
+    placeholder="Online class link (optional)"
+    value={scheduleClassLink}
+    onChange={(event) => setScheduleClassLink(event.target.value)}
+  />
+
+  <button type="button" onClick={addSchedule}>
+    Add Schedule
+  </button>
 </div>
-
-<input
-  type="url"
-  aria-label="Online class link (optional)"
-  placeholder="Online class link (optional)"
-  value={scheduleClassLink}
-  onChange={(event) => setScheduleClassLink(event.target.value)}
-/> 
-
-              <button type="button" onClick={addSchedule}>
-                Add Schedule
-              </button>
-            </div>
 
             {scheduleMessage && (
               <p className="welcome-message">{scheduleMessage}</p>
