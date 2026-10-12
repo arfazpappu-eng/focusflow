@@ -16,6 +16,14 @@ const studySessionSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+
+    // Each new study session belongs to one user account.
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
   },
   {
     timestamps: true,

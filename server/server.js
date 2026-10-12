@@ -10,18 +10,25 @@ const Task = require('./models/task')
 const Schedule = require('./models/schedule')
 const StudySession = require('./models/studySession')
 const User = require('./models/user')
+
 const app = express()
-const PORT = 5000
+const PORT = process.env.PORT || 5000
+
 app.use(express.json())
-app.use(cors({
-  origin: [
-    'https://focusflow-9k1t.vercel.app',
-    'http://localhost:5173',
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}))
-// MongoDB connection
+
+app.use(
+  cors({
+    origin: [
+      'https://focusflow-9k1t.vercel.app',
+      'http://localhost:5173',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+)
+
+// ==================== DATABASE ====================
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
@@ -30,47 +37,99 @@ mongoose
   .catch((error) => {
     console.error('MongoDB connection failed:', error.message)
   })
+
 // ==================== AUTHENTICATION ====================
 
-// REGISTER
+// Verify the login token before allowing access to private data.
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers.authorization
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      message: 'Authentication required. Please log in.',
+    })
+  }
+
+  const token = authHeader.slice(7)
+
+  if (!process.env.JWT_SECRET) {
+    console.error('JWT_SECRET is not configured')
+
+    return res.status(500).json({
+      message: 'Authentication is not configured.',
+    })
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    if (
+      !decoded.userId ||
+      !mongoose.isValidObjectId(decoded.userId)
+    ) {
+      return res.status(401).json({
+        message: 'Invalid authentication token.',
+      })
+    }
+
+    req.userId = decoded.userId
+    next()
+  } catch (error) {
+    return res.status(401).json({
+      message: 'Your session is invalid or expired. Please log in again.',
+    })
+  }
+}
+
+// ==================== REGISTER ====================
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password } = req.body
 
-    if (!name || !email || !password) {
+    if (
+      typeof name !== 'string' ||
+      !name.trim() ||
+      typeof email !== 'string' ||
+      !email.trim() ||
+      typeof password !== 'string' ||
+      !password
+    ) {
       return res.status(400).json({
-        message: 'Name, email and password are required',
+        message: 'Name, email and password are required.',
       })
     }
 
     if (password.length < 6) {
       return res.status(400).json({
-        message: 'Password must be at least 6 characters',
+        message: 'Password must be at least 6 characters.',
       })
     }
 
+    const normalizedEmail = email.trim().toLowerCase()
+
     const existingUser = await User.findOne({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
     })
 
     if (existingUser) {
-      return res.status(400).json({
-        message: 'An account with this email already exists',
+      return res.status(409).json({
+        message: 'An account with this email already exists.',
       })
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
     const user = new User({
-      name,
-      email: email.toLowerCase(),
+      name: name.trim(),
+      email: normalizedEmail,
       password: hashedPassword,
     })
 
     const savedUser = await user.save()
 
-    res.status(201).json({
-      message: 'Account created successfully',
+    return res.status(201).json({
+      message: 'Account created successfully.',
       user: {
         id: savedUser._id,
         name: savedUser.name,
@@ -78,32 +137,44 @@ app.post('/api/auth/register', async (req, res) => {
       },
     })
   } catch (error) {
-    console.error('Registration error:', error)
+    console.error('Registration error:', error.message)
 
-    res.status(500).json({
-      message: 'Failed to create account',
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: 'An account with this email already exists.',
+      })
+    }
+
+    return res.status(500).json({
+      message: 'Failed to create account.',
     })
   }
 })
 
-// LOGIN
+// ==================== LOGIN ====================
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body
 
-    if (!email || !password) {
+    if (
+      typeof email !== 'string' ||
+      !email.trim() ||
+      typeof password !== 'string' ||
+      !password
+    ) {
       return res.status(400).json({
-        message: 'Email and password are required',
+        message: 'Email and password are required.',
       })
     }
 
     const user = await User.findOne({
-      email: email.toLowerCase(),
+      email: email.trim().toLowerCase(),
     })
 
     if (!user) {
       return res.status(401).json({
-        message: 'Invalid email or password',
+        message: 'Invalid email or password.',
       })
     }
 
@@ -114,13 +185,21 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (!passwordMatch) {
       return res.status(401).json({
-        message: 'Invalid email or password',
+        message: 'Invalid email or password.',
+      })
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not configured')
+
+      return res.status(500).json({
+        message: 'Authentication is not configured.',
       })
     }
 
     const token = jwt.sign(
       {
-        userId: user._id,
+        userId: user._id.toString(),
         email: user.email,
       },
       process.env.JWT_SECRET,
@@ -129,8 +208,8 @@ app.post('/api/auth/login', async (req, res) => {
       }
     )
 
-    res.json({
-      message: 'Login successful',
+    return res.json({
+      message: 'Login successful.',
       token,
       user: {
         id: user._id,
@@ -139,57 +218,121 @@ app.post('/api/auth/login', async (req, res) => {
       },
     })
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Login error:', error.message)
 
-    res.status(500).json({
-      message: 'Failed to login',
+    return res.status(500).json({
+      message: 'Failed to log in.',
     })
   }
 })
+
+// ==================== PROTECT PRIVATE ROUTES ====================
+
+app.use('/api/tasks', authenticateToken)
+app.use('/api/schedules', authenticateToken)
+app.use('/api/study-sessions', authenticateToken)
+
 // ==================== TASKS ====================
 
+// Get only the logged-in user's tasks.
 app.get('/api/tasks', async (req, res) => {
   try {
-    const tasks = await Task.find()
-    res.json(tasks)
+    const tasks = await Task.find({
+      user: req.userId,
+    }).sort({ _id: -1 })
+
+    return res.json(tasks)
   } catch (error) {
-    res.status(500).json({ message: 'Failed to get tasks' })
+    console.error('Get tasks error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to get tasks.',
+    })
   }
 })
 
+// Create a task owned by the logged-in user.
 app.post('/api/tasks', async (req, res) => {
   try {
+    const { title, deadline } = req.body
+
+    if (typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({
+        message: 'Task title is required.',
+      })
+    }
+
     const newTask = new Task({
-      title: req.body.title,
-      deadline: req.body.deadline,
+      title: title.trim(),
+      deadline:
+        typeof deadline === 'string' && deadline
+          ? deadline
+          : 'No deadline',
+      user: req.userId,
     })
 
     const savedTask = await newTask.save()
-    res.status(201).json(savedTask)
+
+    return res.status(201).json(savedTask)
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create task' })
+    console.error('Create task error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to create task.',
+    })
   }
 })
 
+// Update only a task owned by the logged-in user.
 app.put('/api/tasks/:id', async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        message: 'Task not found.',
+      })
+    }
+
     const updateData = {}
 
     if (req.body.title !== undefined) {
-      updateData.title = req.body.title
+      if (
+        typeof req.body.title !== 'string' ||
+        !req.body.title.trim()
+      ) {
+        return res.status(400).json({
+          message: 'Task title cannot be empty.',
+        })
+      }
+
+      updateData.title = req.body.title.trim()
     }
 
     if (req.body.deadline !== undefined) {
+      if (typeof req.body.deadline !== 'string') {
+        return res.status(400).json({
+          message: 'Invalid deadline.',
+        })
+      }
+
       updateData.deadline = req.body.deadline
     }
 
     if (req.body.completed !== undefined) {
+      if (typeof req.body.completed !== 'boolean') {
+        return res.status(400).json({
+          message: 'Invalid completed value.',
+        })
+      }
+
       updateData.completed = req.body.completed
     }
 
-    const updatedTask = await Task.findByIdAndUpdate(
-      req.params.id,
-      updateData,
+    const updatedTask = await Task.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.userId,
+      },
+      { $set: updateData },
       {
         new: true,
         runValidators: true,
@@ -197,111 +340,241 @@ app.put('/api/tasks/:id', async (req, res) => {
     )
 
     if (!updatedTask) {
-      return res.status(404).json({ message: 'Task not found' })
+      return res.status(404).json({
+        message: 'Task not found.',
+      })
     }
 
-    res.json(updatedTask)
+    return res.json(updatedTask)
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update task' })
+    console.error('Update task error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to update task.',
+    })
   }
 })
 
+// Delete only a task owned by the logged-in user.
 app.delete('/api/tasks/:id', async (req, res) => {
   try {
-    await Task.findByIdAndDelete(req.params.id)
-    res.json({ message: 'Task deleted successfully' })
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        message: 'Task not found.',
+      })
+    }
+
+    const deletedTask = await Task.findOneAndDelete({
+      _id: req.params.id,
+      user: req.userId,
+    })
+
+    if (!deletedTask) {
+      return res.status(404).json({
+        message: 'Task not found.',
+      })
+    }
+
+    return res.json({
+      message: 'Task deleted successfully.',
+    })
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete task' })
+    console.error('Delete task error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to delete task.',
+    })
   }
 })
 
-// ==================== SCHEDULE ====================
+// ==================== SCHEDULES ====================
 
+// Get only the logged-in user's schedules.
 app.get('/api/schedules', async (req, res) => {
   try {
-    const schedules = await Schedule.find().sort({
+    const schedules = await Schedule.find({
+      user: req.userId,
+    }).sort({
       date: 1,
       startTime: 1,
     })
 
-    res.json(schedules)
+    return res.json(schedules)
   } catch (error) {
-    res.status(500).json({ message: 'Failed to get schedules' })
+    console.error('Get schedules error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to get schedules.',
+    })
   }
 })
 
+// Create a schedule owned by the logged-in user.
 app.post('/api/schedules', async (req, res) => {
   try {
+    const {
+      subject,
+      date,
+      startTime,
+      endTime,
+      classLink,
+    } = req.body
+
+    if (
+      typeof subject !== 'string' ||
+      !subject.trim() ||
+      typeof date !== 'string' ||
+      !date ||
+      typeof startTime !== 'string' ||
+      !startTime ||
+      typeof endTime !== 'string' ||
+      !endTime
+    ) {
+      return res.status(400).json({
+        message: 'Subject, date, start time and end time are required.',
+      })
+    }
+
     const newSchedule = new Schedule({
-      subject: req.body.subject,
-      date: req.body.date,
-      startTime: req.body.startTime,
-      endTime: req.body.endTime,
-      classLink: req.body.classLink,
+      subject: subject.trim(),
+      date,
+      startTime,
+      endTime,
+      classLink:
+        typeof classLink === 'string' ? classLink : '',
+      user: req.userId,
     })
 
     const savedSchedule = await newSchedule.save()
 
-    res.status(201).json(savedSchedule)
+    return res.status(201).json(savedSchedule)
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create schedule' })
+    console.error('Create schedule error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to create schedule.',
+    })
   }
 })
 
+// Delete only a schedule owned by the logged-in user.
 app.delete('/api/schedules/:id', async (req, res) => {
   try {
-    await Schedule.findByIdAndDelete(req.params.id)
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        message: 'Schedule not found.',
+      })
+    }
 
-    res.json({ message: 'Schedule deleted successfully' })
+    const deletedSchedule = await Schedule.findOneAndDelete({
+      _id: req.params.id,
+      user: req.userId,
+    })
+
+    if (!deletedSchedule) {
+      return res.status(404).json({
+        message: 'Schedule not found.',
+      })
+    }
+
+    return res.json({
+      message: 'Schedule deleted successfully.',
+    })
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete schedule' })
+    console.error('Delete schedule error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to delete schedule.',
+    })
   }
 })
 
 // ==================== STUDY SESSIONS ====================
 
+// Get only the logged-in user's study sessions.
 app.get('/api/study-sessions', async (req, res) => {
   try {
-    const sessions = await StudySession.find().sort({
+    const sessions = await StudySession.find({
+      user: req.userId,
+    }).sort({
       date: 1,
     })
 
-    res.json(sessions)
+    return res.json(sessions)
   } catch (error) {
-    res.status(500).json({
-      message: 'Failed to get study sessions',
+    console.error('Get study sessions error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to get study sessions.',
     })
   }
 })
 
+// Create a study session owned by the logged-in user.
 app.post('/api/study-sessions', async (req, res) => {
   try {
+    const { subject, date, minutes } = req.body
+
+    if (
+      typeof subject !== 'string' ||
+      !subject.trim() ||
+      typeof date !== 'string' ||
+      !date ||
+      !Number.isFinite(minutes) ||
+      minutes <= 0
+    ) {
+      return res.status(400).json({
+        message: 'Valid subject, date and minutes are required.',
+      })
+    }
+
     const newSession = new StudySession({
-      subject: req.body.subject,
-      date: req.body.date,
-      minutes: req.body.minutes,
+      subject: subject.trim(),
+      date,
+      minutes,
+      user: req.userId,
     })
 
     const savedSession = await newSession.save()
 
-    res.status(201).json(savedSession)
+    return res.status(201).json(savedSession)
   } catch (error) {
-    res.status(500).json({
-      message: 'Failed to create study session',
+    console.error('Create study session error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to create study session.',
     })
   }
 })
 
+// Delete only a study session owned by the logged-in user.
 app.delete('/api/study-sessions/:id', async (req, res) => {
   try {
-    await StudySession.findByIdAndDelete(req.params.id)
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({
+        message: 'Study session not found.',
+      })
+    }
 
-    res.json({
-      message: 'Study session deleted successfully',
+    const deletedSession = await StudySession.findOneAndDelete({
+      _id: req.params.id,
+      user: req.userId,
+    })
+
+    if (!deletedSession) {
+      return res.status(404).json({
+        message: 'Study session not found.',
+      })
+    }
+
+    return res.json({
+      message: 'Study session deleted successfully.',
     })
   } catch (error) {
-    res.status(500).json({
-      message: 'Failed to delete study session',
+    console.error('Delete study session error:', error.message)
+
+    return res.status(500).json({
+      message: 'Failed to delete study session.',
     })
   }
 })
@@ -309,5 +582,5 @@ app.delete('/api/study-sessions/:id', async (req, res) => {
 // ==================== START SERVER ====================
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
+  console.log(`Server running on port ${PORT}`)
 })

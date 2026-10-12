@@ -26,15 +26,20 @@ const scheduleSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+
+    // Each new schedule belongs to one user account.
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 )
 
-const Schedule = mongoose.model(
-  'Schedule',
-  scheduleSchema
-)
+const Schedule = mongoose.model('Schedule', scheduleSchema)
 
 module.exports = Schedule
