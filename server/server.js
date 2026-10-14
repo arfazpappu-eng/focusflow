@@ -14,8 +14,11 @@ const User = require('./models/user')
 const app = express()
 const PORT = process.env.PORT || 5000
 
+// ==================== MIDDLEWARE ====================
+
 app.use(express.json())
 
+// CORS is set here only. Do not also set it in vercel.json.
 app.use(
   cors({
     origin: [
@@ -28,31 +31,59 @@ app.use(
 )
 
 // ==================== DATABASE ====================
+
 mongoose.set('bufferCommands', false)
 
-async function startServer() {
-  try {
-    if (!process.env.MONGO_URI) {
-      throw new Error('MONGO_URI is not configured')
-    }
+// Reuse one connection between requests (needed on Vercel serverless).
+const cached =
+  global.mongooseCache ||
+  (global.mongooseCache = { conn: null, promise: null })
 
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 15000,
-      connectTimeoutMS: 15000,
-    })
-
-    console.log('MongoDB connected successfully')
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`)
-    })
-  } catch (error) {
-    console.error('Server startup failed:', error.message)
-    process.exit(1)
+async function connectDB() {
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn
   }
+
+  if (!process.env.MONGO_URI) {
+    throw new Error('MONGO_URI is not configured')
+  }
+
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 8000,
+        connectTimeoutMS: 8000,
+      })
+      .catch((error) => {
+        cached.promise = null
+        throw error
+      })
+  }
+
+  cached.conn = await cached.promise
+  return cached.conn
 }
 
-startServer()
+// Make sure the database is connected before any route runs.
+app.use(async (req, res, next) => {
+  try {
+    await connectDB()
+    next()
+  } catch (error) {
+    cached.conn = null
+    cached.promise = null
+    console.error('Database connection failed:', error.message)
+
+    return res.status(500).json({
+      message: 'Database connection failed. Please try again.',
+    })
+  }
+})
+
+// Quick check that the API is running: /api/health
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' })
+})
 
 // ==================== AUTHENTICATION ====================
 
@@ -597,6 +628,12 @@ app.delete('/api/study-sessions/:id', async (req, res) => {
 
 // ==================== START SERVER ====================
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+// Run a normal server only when started with: node server.js
+// On Vercel the app is exported and Vercel calls it for each request.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`)
+  })
+}
+
+module.exports = app
